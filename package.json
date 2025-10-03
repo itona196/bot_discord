@@ -1,0 +1,12 @@
+﻿{
+  "name": "discord-blackjack-bot",
+  "version": "1.0.0",
+  "description": "Blackjack Discord bot - slash commands + buttons (discord.js v14)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "discord.js": "^14.10.0",
+    "dotenv": "^16.0.0"
+  }
+}
