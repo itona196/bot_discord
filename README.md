@@ -8,7 +8,6 @@ Petit bot Discord pour jouer au Blackjack (slash command `/blackjack` + boutons)
 - `GUILD_ID` du serveur de test (Developer Mode → Copy ID)
 
 ## Installation & lancement
-1. Copier l’exemple d’environnement :
-- macOS / Linux:
-  ```bash
-  cp .env.example .env
+1. Renommer .env.exemple en .env et remplacer les valeurs
+2. Installer les dépendences -> `npm install`
+3. Lancer le bot -> `npm start`
