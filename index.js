@@ -15,7 +15,6 @@ import {
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
-const guildId = process.env.GUILD_ID;
 
 if (!token || !clientId) {
   console.error(" Mets DISCORD_TOKEN et CLIENT_ID dans .env");
@@ -24,17 +23,28 @@ if (!token || !clientId) {
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-const SUITS = ["", "", "", ""];
+const SUITS = ["♠️", "♥️", "♦️", "♣️"];
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 
 function createDeck() {
   const deck = [];
-  for (const s of SUITS) for (const r of RANKS) deck.push({ rank: r, suit: s, code: `${r}${s}` });
+  for (const s of SUITS)
+    for (const r of RANKS)
+      deck.push({ rank: r, suit: s, code: `${r}${s}` });
   return shuffle(deck);
 }
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
 function draw(deck){ return deck.pop(); }
 function renderHand(h){ return h.map(c => c.code).join(" "); }
+
 function handValue(hand){
   let sum = 0, aces = 0;
   for(const c of hand){
@@ -45,6 +55,7 @@ function handValue(hand){
   while(sum>21 && aces>0){ sum-=10; aces--; }
   return sum;
 }
+
 function isBlackjack(hand){ return hand.length===2 && handValue(hand)===21; }
 
 const games = new Map();
@@ -57,25 +68,44 @@ function newGame(userId){
   games.set(userId, state);
   return state;
 }
+
 function endGame(userId){ games.delete(userId); }
 
 function actionRowFor(userId, disabled=false, canDouble=true){
-  const hit = new ButtonBuilder().setCustomId(`bj_hit:${userId}`).setLabel("Hit").setStyle(ButtonStyle.Primary).setDisabled(disabled);
-  const stand = new ButtonBuilder().setCustomId(`bj_stand:${userId}`).setLabel("Stand").setStyle(ButtonStyle.Secondary).setDisabled(disabled);
-  const dbl = new ButtonBuilder().setCustomId(`bj_double:${userId}`).setLabel("Double").setStyle(ButtonStyle.Danger).setDisabled(disabled || !canDouble);
+  const hit = new ButtonBuilder()
+    .setCustomId(`bj_hit:${userId}`)
+    .setLabel("Hit")
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(disabled);
+
+  const stand = new ButtonBuilder()
+    .setCustomId(`bj_stand:${userId}`)
+    .setLabel("Stand")
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(disabled);
+
+  const dbl = new ButtonBuilder()
+    .setCustomId(`bj_double:${userId}`)
+    .setLabel("Double")
+    .setStyle(ButtonStyle.Danger)
+    .setDisabled(disabled || !canDouble);
+
   return [ new ActionRowBuilder().addComponents(hit, stand, dbl) ];
 }
+
 function gameEmbedFor(state, user, reveal=false){
   const pVal = handValue(state.player);
-  const dealerDisplay = reveal ? `${renderHand(state.dealer)}\n**Valeur :** ${handValue(state.dealer)}` : `${state.dealer[0].code} ?`;
-  const embed = new EmbedBuilder()
-    .setTitle(`Blackjack  ${user.username}`)
+  const dealerDisplay = reveal
+    ? `${renderHand(state.dealer)}\n**Valeur :** ${handValue(state.dealer)}`
+    : `${state.dealer[0].code} ?`;
+
+  return new EmbedBuilder()
+    .setTitle(`🃏 Blackjack — ${user.username}`)
     .addFields(
       { name: "Ta main", value: `${renderHand(state.player)}\n**Valeur :** ${pVal}`, inline:false },
       { name: "Main du croupier", value: dealerDisplay, inline:false }
     )
     .setFooter({ text: state.finished ? "Partie terminée" : "Choisis : Hit / Stand / Double" });
-  return embed;
 }
 
 function dealerPlay(state){
@@ -88,7 +118,7 @@ function resolveState(state){
   if (isBlackjack(state.player) && !isBlackjack(state.dealer)) return { result:"blackjack", text:"Blackjack ! Tu gagnes 3:2." };
   if (isBlackjack(state.dealer) && !isBlackjack(state.player)) return { result:"lose", text:"Le croupier a Blackjack. Tu perds." };
   if (p>21) return { result:"bust", text:"Busted ! Tu perds." };
-  if (d>21) return { result:"win", text:"Le croupier bust  tu gagnes !" };
+  if (d>21) return { result:"win", text:"Le croupier bust — tu gagnes !" };
   if (p> d) return { result:"win", text:"Tu gagnes !" };
   if (p === d) return { result:"push", text:"Égalité (Push)." };
   return { result:"lose", text:"Tu perds." };
@@ -100,19 +130,17 @@ const commands = [
 ];
 
 const rest = new REST({ version: "10" }).setToken(token);
+
 async function registerCommands(){
-  try{
-    if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-      console.log(" Commandes enregistrées (guild).");
-    } else {
-      await rest.put(Routes.applicationCommands(clientId), { body: commands });
-      console.log(" Commandes enregistrées globalement (peut prendre 1h).");
-    }
-  } catch(e){ console.error("Erreur commandes:", e); }
+  try {
+    await rest.put(Routes.applicationCommands(clientId), { body: commands });
+    console.log("✅ Commandes enregistrées globalement (visible sur tous les serveurs, peut prendre ~1h).");
+  } catch(e){
+    console.error("Erreur commandes:", e);
+  }
 }
 
-client.once("ready", () => console.log(` Connecté en tant que ${client.user.tag}`));
+client.once("ready", () => console.log(`🤖 Connecté en tant que ${client.user.tag}`));
 
 client.on("interactionCreate", async interaction => {
   try {
@@ -131,11 +159,18 @@ client.on("interactionCreate", async interaction => {
           state.finished = true;
           dealerPlay(state);
           const res = resolveState(state);
-          await interaction.reply({ embeds: [gameEmbedFor(state, interaction.user, true)], content: `Resultat: ${res.text}` });
+          await interaction.reply({
+            embeds: [gameEmbedFor(state, interaction.user, true)],
+            content: `Résultat : ${res.text}`
+          });
           endGame(userId);
           return;
         }
-        await interaction.reply({ embeds: [gameEmbedFor(state, interaction.user, false)], components: actionRowFor(userId), ephemeral: false });
+        await interaction.reply({
+          embeds: [gameEmbedFor(state, interaction.user, false)],
+          components: actionRowFor(userId),
+          ephemeral: false
+        });
       }
     }
 
@@ -159,11 +194,18 @@ client.on("interactionCreate", async interaction => {
           state.finished = true;
           dealerPlay(state);
           const res = resolveState(state);
-          await interaction.update({ embeds: [gameEmbedFor(state, interaction.user, true)], components: actionRowFor(userId, true), content: `Resultat: ${res.text}` });
+          await interaction.update({
+            embeds: [gameEmbedFor(state, interaction.user, true)],
+            components: actionRowFor(userId, true),
+            content: `Résultat : ${res.text}`
+          });
           endGame(userId);
           return;
         }
-        await interaction.update({ embeds: [gameEmbedFor(state, interaction.user, false)], components: actionRowFor(userId, false) });
+        await interaction.update({
+          embeds: [gameEmbedFor(state, interaction.user, false)],
+          components: actionRowFor(userId, false)
+        });
         return;
       }
 
@@ -171,7 +213,11 @@ client.on("interactionCreate", async interaction => {
         state.finished = true;
         dealerPlay(state);
         const res = resolveState(state);
-        await interaction.update({ embeds: [gameEmbedFor(state, interaction.user, true)], components: actionRowFor(userId, true), content: `Resultat: ${res.text}` });
+        await interaction.update({
+          embeds: [gameEmbedFor(state, interaction.user, true)],
+          components: actionRowFor(userId, true),
+          content: `Résultat : ${res.text}`
+        });
         endGame(userId);
         return;
       }
@@ -182,7 +228,11 @@ client.on("interactionCreate", async interaction => {
         state.finished = true;
         dealerPlay(state);
         const res = resolveState(state);
-        await interaction.update({ embeds: [gameEmbedFor(state, interaction.user, true)], components: actionRowFor(userId, true), content: `Resultat (double): ${res.text}` });
+        await interaction.update({
+          embeds: [gameEmbedFor(state, interaction.user, true)],
+          components: actionRowFor(userId, true),
+          content: `Résultat (double) : ${res.text}`
+        });
         endGame(userId);
         return;
       }
